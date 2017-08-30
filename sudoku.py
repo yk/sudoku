@@ -63,6 +63,7 @@ def check_consistent(s, idx=None):
 
 
 if __name__ == '__main__':
-    s = generate()
-    c = check_consistent(s)
-    print(s)
+    for _ in range(100):
+        s = generate()
+        c = check_consistent(s)
+        print(s, c)
