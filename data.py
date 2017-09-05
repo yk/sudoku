@@ -9,6 +9,16 @@ def generate(i):
     return sudoku.generate()
 
 
+def load(num_files=1000):
+    games = []
+    for i in range(num_files):
+        fn = (os.path.join(os.path.expanduser('~'), 'data', 'sudoku', 'games_{}.npy'.format(i)))
+        gs = np.load(fn)
+        games.extend(gs)
+    return np.asarray(games)
+
+
+
 def main():
     games_per_file = 1000
     num_files = 1000
