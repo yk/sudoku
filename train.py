@@ -58,20 +58,26 @@ def main():
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
     s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
 
-    q1, q2 = q(s1_oh), q(s2_oh)
+    with tf.variable_scope('q'):
+        q1 = q(s1_oh)
+    with tf.variable_scope('q', reuse=True):
+        q2 = q(s2_oh)
     q1 = tf.stop_gradient(q1)
     q1_masked, q2 = tfl.flatten(q1 * s_diff_action_mask), tfl.flatten(q2 * s2_action_mask)
     q1_masked = tf.reduce_sum(q1_masked, axis=1)
     q2_max = tf.reduce_max(q2, axis=1)
     y = tf.cond(final_step, lambda: reward, lambda: reward + flags.discount * q2_max)
     q_loss = tf.reduce_mean((q1_masked - y)**2.)
+    tf.summary.scalar('q_loss', q_loss)
 
     opt = tf.train.RMSPropOptimizer(flags.lr)
     train_op = opt.minimize(q_loss)
+    summary_op = tf.summary.merge_all()
 
     dataset = data.load()
 
     with tf.Session() as sess:
+        summary_writer = tf.summary.FileWriter('logs')
         sess.run(tf.global_variables_initializer())
         for i in range(flags.iterations):
             begin_batch = (i * flags.batch_size) % len(dataset)
@@ -111,8 +117,9 @@ def main():
                 batch_next = np.asarray(batch_next)
                 rewards = np.asarray(rewards)
 
-                _, ql = sess.run([train_op, q_loss], feed_dict={s1: batch, s2: batch_next, reward: rewards, final_step: e_step == flags.empty - 1})
+                _, ql, summ_str = sess.run([train_op, q_loss, summary_op], feed_dict={s1: batch, s2: batch_next, reward: rewards, final_step: e_step == flags.empty - 1})
                 print(ql)
+                summary_writer.add_summary(summ_str)
 
                 batch = batch_next
     
