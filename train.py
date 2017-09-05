@@ -56,7 +56,6 @@ def main():
     final_step = tf.placeholder(tf.bool)
     s1_oh, s2_oh = tf.one_hot(s1, 10), tf.one_hot(s2, 10)
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
-    s1_action_mask = tf.tile(tf.cast(s1_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
     s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
 
     q1, q2 = q(s1_oh), q(s2_oh)
