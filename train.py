@@ -23,10 +23,10 @@ action_shape = (9, 9, 9)
 
 def q(s):
     net = s
-    net = tfl.conv2d(net, 10, 3)
+    # net = tfl.conv2d(net, 10, 3)
     # net = tfl.conv2d(net, 100, 3)
 
-    net = tfl.conv2d(net, 9, 3, activation_fn=None)
+    net = tfl.conv2d(net, 9, 9, activation_fn=None)
 
     return net
 
