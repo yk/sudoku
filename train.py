@@ -103,11 +103,15 @@ def main():
                     qv += np.min(qv)
                     qv = qv * (b > 0)
                     arg_max_q = np.argmax(qv.ravel()) // 9
-                    if np.random.rand() < flags.epsilon:
+                    explore = np.random.rand() < flags.epsilon
+                    if explore:
                         arg_max_q = np.random.randint(81)
                     x, y = arg_max_q // 9, arg_max_q % 9
                     b = np.copy(b)
-                    b[x, y] = np.argmax(qv[x, y]) + 1
+                    new_b_val = np.argmax(qv[x, y]) + 1
+                    if explore:
+                        new_b_val = np.random.randint(9) + 1
+                    b[x, y] = new_b_val
                     batch_next.append(b)
                     if sudoku.check_consistent(b, (x, y)):
                         r = 0.
