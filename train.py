@@ -23,8 +23,8 @@ action_shape = (9, 9, 9)
 
 def q(s):
     net = s
-    net = tfl.conv2d(net, 100, 3)
-    net = tfl.conv2d(net, 100, 3)
+    net = tfl.conv2d(net, 10, 3)
+    # net = tfl.conv2d(net, 100, 3)
 
     net = tfl.conv2d(net, 9, 3, activation_fn=None)
 
@@ -58,12 +58,13 @@ def main():
     s1_oh, s2_oh = tf.one_hot(s1, 10), tf.one_hot(s2, 10)
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
     s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
+    tf.summary.scalar('mean_reward', tf.reduce_mean(reward))
 
     with tf.variable_scope('q'):
         q1 = q(s1_oh)
     with tf.variable_scope('q', reuse=True):
         q2 = q(s2_oh)
-    q1 = tf.stop_gradient(q1)
+    q2 = tf.stop_gradient(q2)
     q1_masked, q2 = tfl.flatten(q1 * s_diff_action_mask), tfl.flatten(q2 * s2_action_mask)
     q1_masked = tf.reduce_sum(q1_masked, axis=1)
     q2_max = tf.reduce_max(q2, axis=1)
