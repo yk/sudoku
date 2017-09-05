@@ -83,6 +83,8 @@ def main():
         sess.run(tf.global_variables_initializer())
         global_step = 0
         for i in range(flags.iterations):
+            if i % 10 == 0:
+                print('iteration', i)
             begin_batch = (i * flags.batch_size) % len(dataset)
             end_batch = ((i+1) * flags.batch_size) % len(dataset)
             if end_batch < begin_batch:
@@ -96,10 +98,14 @@ def main():
             for e_step in range(flags.empty):
                 q1_val, = sess.run([q1], feed_dict={s1: batch})
 
+                batch_prev = []
                 batch_next = []
                 rewards = []
 
                 for b, qv in zip(batch, q1_val):
+                    if not sudoku.check_consistent(b):
+                        continue
+                    batch_prev.append(b)
                     qv += np.min(qv)
                     qv = qv * (b > 0)
                     arg_max_q = np.argmax(qv.ravel()) // 9
@@ -121,11 +127,14 @@ def main():
                         r = -1.
                     rewards.append(r)
 
+                if len(batch_prev) == 0:
+                    continue
+
+                batch_prev = np.asarray(batch_prev)
                 batch_next = np.asarray(batch_next)
                 rewards = np.asarray(rewards)
 
-                _, ql, summ_str = sess.run([train_op, q_loss, summary_op], feed_dict={s1: batch, s2: batch_next, reward: rewards, final_step: e_step == flags.empty - 1})
-                print(ql)
+                _, ql, summ_str = sess.run([train_op, q_loss, summary_op], feed_dict={s1: batch_prev, s2: batch_next, reward: rewards, final_step: e_step == flags.empty - 1})
                 summary_writer.add_summary(summ_str, global_step)
                 global_step += 1
 
