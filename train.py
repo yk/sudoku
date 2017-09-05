@@ -9,6 +9,7 @@ tf.flags.DEFINE_integer('iterations', 30, 'number of iterations')
 tf.flags.DEFINE_integer('batch_size', 100, 'batch size')
 tf.flags.DEFINE_float('discount', .99, 'discount factor')
 tf.flags.DEFINE_float('lr', 3e-4, 'learning rate')
+tf.flags.DEFINE_float('epsilon', .1, 'exploration epsilon')
 
 tf.flags.DEFINE_integer('rep', 0, 'dummy repetition')
 tf.flags.DEFINE_integer('empty', 1, 'number of empty fields')
@@ -94,6 +95,8 @@ def main():
                     qv += np.min(qv)
                     qv = qv * (b > 0)
                     arg_max_q = np.argmax(qv.ravel()) // 9
+                    if np.random.rand() < flags.epsilon:
+                        arg_max_q = np.random.randint(81)
                     x, y = arg_max_q // 9, arg_max_q % 9
                     b = np.copy(b)
                     b[x, y] = np.argmax(qv[x, y]) + 1
