@@ -4,6 +4,7 @@ from tensorflow.contrib import layers as tfl
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import data
+import time
 
 tf.flags.DEFINE_integer('iterations', 30, 'number of iterations')
 tf.flags.DEFINE_integer('batch_size', 100, 'batch size')
@@ -77,8 +78,9 @@ def main():
     dataset = data.load()
 
     with tf.Session() as sess:
-        summary_writer = tf.summary.FileWriter('logs')
+        summary_writer = tf.summary.FileWriter('logs/{}'.format(int(time.time())))
         sess.run(tf.global_variables_initializer())
+        global_step = 0
         for i in range(flags.iterations):
             begin_batch = (i * flags.batch_size) % len(dataset)
             end_batch = ((i+1) * flags.batch_size) % len(dataset)
@@ -119,7 +121,8 @@ def main():
 
                 _, ql, summ_str = sess.run([train_op, q_loss, summary_op], feed_dict={s1: batch, s2: batch_next, reward: rewards, final_step: e_step == flags.empty - 1})
                 print(ql)
-                summary_writer.add_summary(summ_str)
+                summary_writer.add_summary(summ_str, global_step)
+                global_step += 1
 
                 batch = batch_next
     
