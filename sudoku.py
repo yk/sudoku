@@ -4,32 +4,53 @@ from numpy.lib.arraysetops import unique
 import itertools as itt
 import random
 
-def generate():
-    s = np.zeros((9, 9), np.int)
-    stack = [s]
-    idcs = list(itt.product(range(9), range(9)))
-    props = [np.random.choice(9, 9, False) + 1 for _ in range(9*9)]
+def solve(s, max_solutions=1):
+    idcs_x, idcs_y = np.where(s == 0)
+    num_empty = len(idcs_x)
+    if num_empty == 0:
+        return [s]
+    props = [np.random.choice(9, 9, False) + 1 for _ in range(num_empty)]
     search_idcs = [0 for _ in props]
     i = 0
-    while i < len(idcs):
-        idx = idcs[i]
-        sn = np.copy(stack[-1])
+    sols = []
+    while i >= 0:
+        x, y = idcs_x[i], idcs_y[i]
         prop = props[i]
         si = search_idcs[i]
         while si < len(prop):
             p = prop[si]
-            sn[idx] = p
-            if check_consistent(sn, idx):
-                stack.append(sn)
+            s[x, y] = p
+            if check_consistent(s, (x, y)):
                 search_idcs[i] = si + 1
-                i += 1
+                if np.all(s):
+                    sols.append(np.copy(s))
+                    if len(sols) >= max_solutions and max_solutions > 0:
+                        return sols
+                else:
+                    i += 1
                 break
             si += 1
         if si >= len(prop):
             search_idcs[i] = 0
-            stack.pop()
+            s[x, y] = 0
             i -= 1
-    return stack[-1]
+    return sols
+
+
+def make_empty(s, empty=1):
+    s_shape = s.shape
+    s = np.copy(s)
+    s = s.ravel()
+    s[np.random.choice(len(s), empty, False)] = 0
+    s = s.reshape(s_shape)
+    return s
+
+def generate(empty=0):
+    s = np.zeros((9, 9), np.int32)
+    s = solve(s)[0]
+    if empty > 0:
+        s = make_empty(s, empty)
+    return s
 
 def check_consistent_unit(u):
     u = u.ravel()
@@ -38,6 +59,22 @@ def check_consistent_unit(u):
         c = c[1:]
     res = np.all(c == 1)
     return res
+
+def random_move(s):
+    inds_x, inds_y = np.where(s == 0)
+    if len(inds_x) == 0:
+        raise Exception('No move possible')
+    i = np.random.choice(len(inds_x))
+    x, y = inds_x[i], inds_y[i]
+    s = np.copy(s)
+    s[x, y] = np.random.randint(1, 10)
+    return s, (x, y)
+
+def check_all_filled(s):
+    return np.all(s)
+
+def check_solved(s):
+    return check_consistent(s) and check_all_filled(s)
 
 def check_consistent(s, idx=None):
     if idx is not None:
@@ -64,6 +101,6 @@ def check_consistent(s, idx=None):
 
 if __name__ == '__main__':
     for _ in range(100):
-        s = generate()
-        c = check_consistent(s)
-        print(s, c)
+        for i in range(60):
+            s = np.mean([len(solve(generate(i), -1)) for _ in range(100)])
+            print(i, s)
