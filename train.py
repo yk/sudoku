@@ -6,6 +6,7 @@ import numpy as np
 import data
 import time
 import os
+from sudoku import SIDE, SIDE_ROOT
 
 tf.flags.DEFINE_integer('iterations', 30, 'number of iterations')
 tf.flags.DEFINE_integer('batch_size', 100, 'batch size')
@@ -21,20 +22,22 @@ tf.flags.DEFINE_integer('test_after', 100, 'number of iterations before test')
 
 flags = tf.flags.FLAGS
 
-game_shape = (9, 9)
-action_shape = (9, 9, 9)
+game_shape = (SIDE, SIDE)
+action_shape = (SIDE, SIDE, SIDE)
 
 
 def q(s):
     net = s
-    net_blocks = tfl.conv2d(net, flags.channels_l1, [3, 3], stride=3, padding='VALID')
-    net_rows = tfl.conv2d(net, flags.channels_l1, [1, 9], padding='VALID')
-    net_cols = tfl.conv2d(net, flags.channels_l1, [9, 1], padding='VALID')
-    net = tf.concat((tfl.flatten(net_blocks), tfl.flatten(net_rows), tfl.flatten(net_cols)), -1)
+    blocks = []
+    blocks.append(tfl.conv2d(net, flags.channels_l1, [SIDE_ROOT, SIDE_ROOT], stride=SIDE_ROOT, padding='VALID'))
+    blocks.append(tfl.conv2d(net, flags.channels_l1, [1, SIDE], padding='VALID'))
+    blocks.append(tfl.conv2d(net, flags.channels_l1, [SIDE, 1], padding='VALID'))
+    # blocks.append(tfl.conv2d(net, flags.channels_l1, 5))
+    net = tf.concat([tfl.flatten(b) for b in blocks], -1)
 
-    net = tfl.fully_connected(net, 9*9*9)
+    net = tfl.fully_connected(net, SIDE*SIDE*SIDE)
 
-    net = tf.reshape(net, (-1, 9, 9, 9))
+    net = tf.reshape(net, (-1, SIDE, SIDE, SIDE))
 
     return net
 
@@ -48,9 +51,9 @@ def main():
     for e in range(1, flags.empty + 1):
         tf.summary.scalar('empty_{}_num_samples'.format(e), tf.shape(s1)[0], collections=['summary_empty_{}'.format(e)])
 
-    s1_oh, s2_oh = tf.one_hot(s1, 10), tf.one_hot(s2, 10)
+    s1_oh, s2_oh = tf.one_hot(s1, SIDE+1), tf.one_hot(s2, SIDE+1)
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
-    s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
+    s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, SIDE))
     for e in range(1, flags.empty + 1):
         tf.summary.scalar('empty_{}_mean_reward'.format(e), tf.reduce_mean(reward), collections=['summary_empty_{}'.format(e)])
 
@@ -86,12 +89,13 @@ def main():
         global_step = 0
         for empty in range(1, flags.empty + 1):
             print('empty', empty)
+            np.random.shuffle(dataset)
             for i in range(flags.iterations):
                 if i % 10 == 0:
                     print('iteration', i)
                 begin_batch = (i * flags.batch_size) % len(dataset)
                 end_batch = ((i+1) * flags.batch_size) % len(dataset)
-                if end_batch < begin_batch:
+                if end_batch <= begin_batch:
                     np.random.shuffle(dataset)
                     begin_batch = 0
                     end_batch = flags.batch_size
@@ -119,12 +123,12 @@ def main():
                             qv = np.random.rand(*(qv.shape))
                         qv += np.min(qv)
                         qv = qv * (b > 0)
-                        arg_max_q = np.argmax(qv.ravel()) // 9
-                        x, y = arg_max_q // 9, arg_max_q % 9
+                        arg_max_q = np.argmax(qv.ravel()) // SIDE
+                        x, y = arg_max_q // SIDE, arg_max_q % SIDE
                         b = np.copy(b)
                         new_b_val = np.argmax(qv[x, y]) + 1
                         if explore:
-                            new_b_val = np.random.randint(9) + 1
+                            new_b_val = np.random.randint(SIDE) + 1
                         b[x, y] = new_b_val
                         batch_next.append(b)
                         if sudoku.check_consistent(b, (x, y)):

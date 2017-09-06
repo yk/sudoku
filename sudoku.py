@@ -4,8 +4,8 @@ from numpy.lib.arraysetops import unique
 import itertools as itt
 import random
 
-SIDE = 9
-SIDE_ROOT = 3
+SIDE = 4
+SIDE_ROOT = 2
 
 def solve(s, max_solutions=1):
     idcs_x, idcs_y = np.where(s == 0)
