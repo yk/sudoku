@@ -4,12 +4,15 @@ from numpy.lib.arraysetops import unique
 import itertools as itt
 import random
 
+SIDE = 9
+SIDE_ROOT = 3
+
 def solve(s, max_solutions=1):
     idcs_x, idcs_y = np.where(s == 0)
     num_empty = len(idcs_x)
     if num_empty == 0:
         return [s]
-    props = [np.random.choice(9, 9, False) + 1 for _ in range(num_empty)]
+    props = [np.random.choice(SIDE, SIDE, False) + 1 for _ in range(num_empty)]
     search_idcs = [0 for _ in props]
     i = 0
     sols = []
@@ -46,7 +49,7 @@ def make_empty(s, empty=1):
     return s
 
 def generate(empty=0):
-    s = np.zeros((9, 9), np.int32)
+    s = np.zeros((SIDE, SIDE), np.int32)
     s = solve(s)[0]
     if empty > 0:
         s = make_empty(s, empty)
@@ -67,7 +70,7 @@ def random_move(s):
     i = np.random.choice(len(inds_x))
     x, y = inds_x[i], inds_y[i]
     s = np.copy(s)
-    s[x, y] = np.random.randint(1, 10)
+    s[x, y] = np.random.randint(1, SIDE+1)
     return s, (x, y)
 
 def check_all_filled(s):
@@ -82,18 +85,18 @@ def check_consistent(s, idx=None):
             return False
         if not check_consistent_unit(s[:, idx[1]]):
             return False
-        i, j = idx[0] // 3, idx[1] // 3
-        if not check_consistent_unit(s[i*3:(i+1)*3,j*3:(j+1)*3]):
+        i, j = idx[0] // SIDE_ROOT, idx[1] // SIDE_ROOT
+        if not check_consistent_unit(s[i*SIDE_ROOT:(i+1)*SIDE_ROOT,j*SIDE_ROOT:(j+1)*SIDE_ROOT]):
             return False
     else:
-        for i in range(9):
+        for i in range(SIDE):
             if not check_consistent_unit(s[i, :]):
                 return False
             if not check_consistent_unit(s[:, i]):
                 return False
-        for i in range(3):
-            for j in range(3):
-                if not check_consistent_unit(s[i*3:(i+1)*3,j*3:(j+1)*3]):
+        for i in range(SIDE_ROOT):
+            for j in range(SIDE_ROOT):
+                if not check_consistent_unit(s[i*SIDE_ROOT:(i+1)*SIDE_ROOT,j*SIDE_ROOT:(j+1)*SIDE_ROOT]):
                     return False
     return True
     
