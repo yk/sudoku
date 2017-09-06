@@ -45,6 +45,9 @@ def main():
     reward = tf.placeholder(tf.float32, (None,))
     e_step_var = tf.placeholder(tf.int32)
 
+    for e in range(flags.empty, 0, -1):
+        tf.summary.scalar('empty_{}_num_samples'.format(e), tf.shape(s1)[0], collections=['summary_empty_{}'.format(e)])
+
     s1_oh, s2_oh = tf.one_hot(s1, 10), tf.one_hot(s2, 10)
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
     s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
@@ -71,7 +74,7 @@ def main():
 
     opt = tf.train.RMSPropOptimizer(flags.lr)
     train_op = opt.minimize(q_loss, var_list=q1_vars)
-    summary_ops = [tf.summary.merge_all('summary_empty_{}'.format(e)) for e in range(1, flags.empty + 1)]
+    summary_ops = [tf.summary.merge_all('summary_empty_{}'.format(e)) for e in range(flags.empty, 0, -1)]
 
     dataset = data.load()
 
@@ -81,7 +84,7 @@ def main():
         saver = tf.train.Saver(max_to_keep=1)
         sess.run(tf.global_variables_initializer())
         global_step = 0
-        for empty in range(flags.empty, 0, -1):
+        for empty in range(1, flags.empty + 1):
             print('empty', empty)
             for i in range(flags.iterations):
                 if i % 10 == 0:
@@ -140,7 +143,7 @@ def main():
                     rewards = np.asarray(rewards)
 
                     ops_to_run = [train_op]
-                    summary_op = summary_ops[e_step - 1]
+                    summary_op = summary_ops[empty - e_step]
                     ops_to_run.append(summary_op)
 
                     run_res = sess.run(ops_to_run, feed_dict={s1: batch_prev, s2: batch_next, reward: rewards, e_step_var: e_step})
