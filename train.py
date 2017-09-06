@@ -45,13 +45,13 @@ def main():
     reward = tf.placeholder(tf.float32, (None,))
     e_step_var = tf.placeholder(tf.int32)
 
-    for e in range(flags.empty, 0, -1):
+    for e in range(1, flags.empty + 1):
         tf.summary.scalar('empty_{}_num_samples'.format(e), tf.shape(s1)[0], collections=['summary_empty_{}'.format(e)])
 
     s1_oh, s2_oh = tf.one_hot(s1, 10), tf.one_hot(s2, 10)
     s_diff_action_mask = (s2_oh - s1_oh)[:, :, :, 1:]
     s2_action_mask = tf.tile(tf.cast(s2_oh[:, :, :, :1] > 1e-9, tf.float32), (1, 1, 1, 9))
-    for e in range(flags.empty, 0, -1):
+    for e in range(1, flags.empty + 1):
         tf.summary.scalar('empty_{}_mean_reward'.format(e), tf.reduce_mean(reward), collections=['summary_empty_{}'.format(e)])
 
     with tf.variable_scope('q1'):
@@ -64,7 +64,7 @@ def main():
     q2_max = tf.reduce_max(q2, axis=1)
     y = reward + tf.cast(tf.not_equal(e_step_var, tf.constant(1, tf.int32)), tf.float32) * flags.discount * q2_max
     q_loss = tf.reduce_mean((q1_masked - y)**2.)
-    for e in range(flags.empty, 0, -1):
+    for e in range(1, flags.empty + 1):
         tf.summary.scalar('empty_{}_q_loss'.format(e), q_loss, collections=['summary_empty_{}'.format(e)])
 
     q1_vars = [v for v in tf.trainable_variables() if v.name.startswith('q1/')]
@@ -74,7 +74,7 @@ def main():
 
     opt = tf.train.RMSPropOptimizer(flags.lr)
     train_op = opt.minimize(q_loss, var_list=q1_vars)
-    summary_ops = [tf.summary.merge_all('summary_empty_{}'.format(e)) for e in range(flags.empty, 0, -1)]
+    summary_ops = [tf.summary.merge_all('summary_empty_{}'.format(e)) for e in range(1, flags.empty + 1)]
 
     dataset = data.load()
 
@@ -143,7 +143,7 @@ def main():
                     rewards = np.asarray(rewards)
 
                     ops_to_run = [train_op]
-                    summary_op = summary_ops[empty - e_step]
+                    summary_op = summary_ops[e_step - 1]
                     ops_to_run.append(summary_op)
 
                     run_res = sess.run(ops_to_run, feed_dict={s1: batch_prev, s2: batch_next, reward: rewards, e_step_var: e_step})
